@@ -1,23 +1,45 @@
 class JsonDatabaseAPI {
-  constructor(fileName, customCookieName) {
-    this.cookieName = "log";
-    this.customCookieName = customCookieName;
-    this.filePath = fileName;
-    this.logFilePath = 'logs.txt';
-    this.database = this.loadDatabase();
-  }
+    constructor(fileName, customCookieName, encryptionKey) {
+        this.cookieName = "log";
+        this.customCookieName = customCookieName;
+        this.filePath = fileName;
+        this.logFilePath = 'logs.txt';
+        this.encryptionKey = encryptionKey; // Encryption key
+        this.database = this.loadDatabase();
+    }
 
-  getDatabase() {
-    return this.database;
-  }
+    // Encrypt data before storing it in local storage
+    encryptData(data) {
+        const encryptedData = CryptoJS.AES.encrypt(JSON.stringify(data), this.encryptionKey).toString();
+        return encryptedData;
+    }
 
-  loadDatabase() {
-    const storedData = localStorage.getItem(this.cookieName);
-    const customStoredData = localStorage.getItem(this.customCookieName);
+    // Decrypt data when retrieving it from local storage
+    decryptData(encryptedData) {
+        const decryptedData = CryptoJS.AES.decrypt(encryptedData, this.encryptionKey).toString(CryptoJS.enc.Utf8);
+        return JSON.parse(decryptedData);
+    }
 
-    const databaseContent = customStoredData ? customStoredData : storedData;
-    return databaseContent ? JSON.parse(databaseContent) : {};
-  }
+    getDatabase() {
+        return this.database;
+    }
+
+    loadDatabase() {
+        const storedData = localStorage.getItem(this.cookieName);
+        const customStoredData = localStorage.getItem(this.customCookieName);
+
+        let databaseContent;
+        if (customStoredData) {
+            // Decrypt custom stored data
+            databaseContent = this.decryptData(customStoredData);
+        } else if (storedData) {
+            // Decrypt stored data
+            databaseContent = this.decryptData(storedData);
+        } else {
+            databaseContent = {};
+        }
+        return databaseContent;
+    }
 
   createEmptyFile() {
     // Initialize an empty object
